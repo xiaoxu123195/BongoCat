@@ -1,8 +1,8 @@
 name: Sync Github Repos To Gitee
+# Fork note: this is the upstream author's Gitee mirror job (needs their
+# secrets). Manual-only so it never auto-fails on the fork.
 on:
-  push:
-    branches:
-      - master
+  workflow_dispatch:
 
 jobs:
   repo-sync:
