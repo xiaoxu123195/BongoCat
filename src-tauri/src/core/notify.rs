@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
-use std::net::TcpListener;
+use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 use tauri::{AppHandle, Emitter, Runtime};
 
 const MAX_BODY: usize = 8 * 1024;
@@ -42,6 +43,55 @@ fn normalize(mut p: NotifyPayload) -> NotifyPayload {
     p
 }
 
+// Read a full HTTP request: headers, then body per Content-Length. Handles
+// clients that send `Expect: 100-continue` (e.g. PowerShell 5.1) and bodies
+// that arrive in separate TCP segments — a single read() sees neither.
+fn read_request(stream: &mut TcpStream) -> Option<(String, Vec<u8>)> {
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
+    let mut buf: Vec<u8> = Vec::with_capacity(4096);
+    let mut tmp = [0u8; 4096];
+
+    let header_end = loop {
+        let n = stream.read(&mut tmp).ok()?;
+        if n == 0 {
+            return None;
+        }
+        buf.extend_from_slice(&tmp[..n]);
+        if let Some(pos) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
+            break pos + 4;
+        }
+        if buf.len() > MAX_BODY + 8192 {
+            return None;
+        }
+    };
+
+    let headers = String::from_utf8_lossy(&buf[..header_end]).to_string();
+    let lower = headers.to_ascii_lowercase();
+
+    let content_length = lower
+        .lines()
+        .find_map(|l| l.strip_prefix("content-length:"))
+        .and_then(|v| v.trim().parse::<usize>().ok())
+        .unwrap_or(0);
+    if content_length > MAX_BODY {
+        return None;
+    }
+
+    if lower.contains("expect: 100-continue") {
+        let _ = stream.write_all(b"HTTP/1.1 100 Continue\r\n\r\n");
+    }
+
+    let mut body = buf[header_end..].to_vec();
+    while body.len() < content_length {
+        let n = stream.read(&mut tmp).ok()?;
+        if n == 0 {
+            break;
+        }
+        body.extend_from_slice(&tmp[..n]);
+    }
+    Some((headers, body))
+}
+
 fn http_response(status: u16, body: &str) -> Vec<u8> {
     format!(
         "HTTP/1.1 {} {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -76,36 +126,31 @@ pub fn start<R: Runtime>(app_handle: AppHandle<R>) {
                 Err(_) => continue,
             };
 
-            let mut buf = vec![0u8; MAX_BODY + 4096];
-            let n = match stream.read(&mut buf) {
-                Ok(n) => n,
-                Err(_) => continue,
+            let (headers, body) = match read_request(&mut stream) {
+                Some(r) => r,
+                None => continue,
             };
-            let raw = String::from_utf8_lossy(&buf[..n]);
+            let lower = headers.to_ascii_lowercase();
 
             // Reject anything with an Origin header (browser CSRF protection).
-            if raw.contains("\r\nOrigin:") || raw.contains("\r\norigin:") {
+            if lower.contains("\r\norigin:") {
                 let _ = stream.write_all(&http_response(400, r#"{"error":"origin rejected"}"#));
                 continue;
             }
 
             // Only accept POST /notify
-            if !raw.starts_with("POST /notify") {
+            if !headers.starts_with("POST /notify") {
                 let _ = stream.write_all(&http_response(405, r#"{"error":"use POST /notify"}"#));
                 continue;
             }
 
             // Require X-Pixo-Notify header (CORS preflight blocker).
-            let has_marker = raw.contains("X-Pixo-Notify:") || raw.contains("x-pixo-notify:");
-            if !has_marker {
+            if !lower.contains("x-pixo-notify:") {
                 let _ = stream.write_all(&http_response(400, r#"{"error":"missing X-Pixo-Notify header"}"#));
                 continue;
             }
 
-            // Extract JSON body (after \r\n\r\n).
-            let body = raw.find("\r\n\r\n").map(|i| &raw[i + 4..]).unwrap_or("");
-
-            match serde_json::from_str::<NotifyPayload>(body) {
+            match serde_json::from_slice::<NotifyPayload>(&body) {
                 Ok(payload) => {
                     let payload = normalize(payload);
                     log::info!("[notify] {}/{}: {}", payload.source, payload.kind, payload.message);
