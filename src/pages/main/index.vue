@@ -16,6 +16,7 @@ import { useAppMenu } from '@/composables/useAppMenu'
 import { useDevice } from '@/composables/useDevice'
 import { useGamepad } from '@/composables/useGamepad'
 import { useModel } from '@/composables/useModel'
+import { useNotify } from '@/composables/useNotify'
 import { useTauriListen } from '@/composables/useTauriListen'
 import { LISTEN_KEY } from '@/constants'
 import { hideWindow, setAlwaysOnTop, setTaskbarVisibility, showWindow } from '@/plugins/window'
@@ -38,6 +39,7 @@ const generalStore = useGeneralStore()
 const resizing = ref(false)
 const backgroundImagePath = ref<string>()
 const { stickActive } = useGamepad()
+const { bubbles } = useNotify()
 
 onMounted(startListening)
 
@@ -213,4 +215,130 @@ function handleMouseMove(event: MouseEvent) {
       </span>
     </div>
   </div>
+
+  <!-- Notification bubbles from Claude Code / external tools. Kept OUTSIDE the
+       cat container: it gets mirrored (-scale-x-100) and opacity-faded, which
+       would flip the bubble text / dim it. -->
+  <div class="notify-stack">
+    <transition-group name="notify-bubble">
+      <div
+        v-for="b in bubbles"
+        :key="b.id"
+        class="notify-bubble"
+        :class="`kind-${b.payload.kind}`"
+      >
+        <div class="notify-source">
+          {{ b.payload.source }}
+        </div>
+        <div class="notify-msg">
+          {{ b.payload.message }}
+        </div>
+        <div
+          v-if="b.payload.title"
+          class="notify-title"
+        >
+          {{ b.payload.title }}
+        </div>
+      </div>
+    </transition-group>
+  </div>
 </template>
+
+<style scoped>
+/* Comic speech bubbles, matching BongoCat's hand-drawn white/black-outline
+   style. Anchored top-left so the cat's head (center) stays visible. */
+.notify-stack {
+  position: fixed;
+  top: 6px;
+  left: 6px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  pointer-events: none;
+  max-width: 62%;
+}
+.notify-bubble {
+  position: relative;
+  width: fit-content;
+  padding: 7px 12px 8px;
+  border-radius: 14px;
+  background: #fff;
+  border: 2px solid #1a1a1a;
+  color: #1a1a1a;
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: 2px 3px 0 rgba(26, 26, 26, 0.15);
+}
+/* Speech tail on the newest (bottom) bubble, pointing down-right at the cat. */
+.notify-bubble:last-child::after {
+  content: '';
+  position: absolute;
+  right: 16px;
+  bottom: -7px;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border-right: 2px solid #1a1a1a;
+  border-bottom: 2px solid #1a1a1a;
+  transform: rotate(45deg);
+}
+.notify-source {
+  display: flex;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: rgba(26, 26, 26, 0.45);
+  margin-bottom: 2px;
+}
+/* Kind shows as a small outlined dot before the source label. */
+.notify-source::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 5px;
+  background: #9ca3af;
+  border: 1.5px solid #1a1a1a;
+}
+.kind-done .notify-source::before {
+  background: #4ade80;
+}
+.kind-need-input .notify-source::before {
+  background: #facc15;
+}
+.kind-error .notify-source::before {
+  background: #f87171;
+}
+.kind-warn .notify-source::before {
+  background: #fb923c;
+}
+.notify-msg {
+  font-weight: 600;
+}
+.notify-title {
+  font-size: 11px;
+  color: rgba(26, 26, 26, 0.6);
+  margin-top: 1px;
+}
+
+/* Bouncy comic pop-in. */
+.notify-bubble-enter-active {
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.notify-bubble-leave-active {
+  transition: all 0.2s ease;
+}
+.notify-bubble-enter-from {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.85);
+}
+.notify-bubble-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.9);
+}
+</style>
