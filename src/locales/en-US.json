@@ -10,6 +10,10 @@
         "editing": "Editing",
         "testing": "Testing",
         "waiting": "Awaiting approval"
+      },
+      "bubble": {
+        "gotIt": "Got it",
+        "snooze": "Remind later"
       }
     },
     "preference": {
@@ -168,19 +172,29 @@
           "duration": "Duration",
           "history": "Notification History",
           "historyCount": "{count} records",
-          "filterAll": "All"
+          "filterAll": "All",
+          "claude": "Claude Code Integration",
+          "claudeHooks": "Hooks config",
+          "badgeStyle": "Badge Style"
         },
         "hints": {
           "preview": "A preview bubble pops up automatically as you adjust the options below.",
           "previewMessage": "This is a preview notification ✨",
           "history": "Last 100 notifications, kept across restarts.",
-          "historyEmpty": "No notifications yet"
+          "historyEmpty": "No notifications yet",
+          "claude": "Generates the hooks config BongoCat needs; preview it, then write it into ~/.claude/settings.json in one click.",
+          "hooksBackup": "The original file is backed up as settings.json.bak first; existing BongoCat entries are updated and everything else is kept. Restart your Claude Code session afterwards.",
+          "hooksWritten": "Written. Takes effect after restarting the Claude Code session",
+          "hooksMissing": "~/.claude/settings.json not found — install and run Claude Code first",
+          "hooksInvalid": "Failed to parse settings.json, write cancelled"
         },
         "buttons": {
           "preview": "Preview",
           "clear": "Clear",
           "showAll": "Show all ({count})",
-          "collapse": "Collapse"
+          "collapse": "Collapse",
+          "previewHooks": "Preview config",
+          "writeHooks": "Write to settings.json"
         }
       }
     }

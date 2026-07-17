@@ -24,6 +24,12 @@ pub struct NotifyPayload {
     pub message: String,
     #[serde(default)]
     pub title: Option<String>,
+    #[serde(default)]
+    pub project: Option<String>,
+    // Explicit badge directive from the sender: a badge code to show
+    // (e.g. "waiting") or "clear" to drop the current badge.
+    #[serde(default)]
+    pub badge: Option<String>,
 }
 
 fn default_source() -> String { "unknown".into() }
@@ -60,6 +66,10 @@ fn normalize(mut p: NotifyPayload) -> NotifyPayload {
     }
     p.message.truncate(300);
     if let Some(ref mut t) = p.title { t.truncate(80); }
+    if let Some(ref mut pr) = p.project { pr.truncate(60); }
+    if p.project.as_deref() == Some("") { p.project = None; }
+    if let Some(ref mut b) = p.badge { b.truncate(24); }
+    if p.badge.as_deref() == Some("") { p.badge = None; }
     p
 }
 
@@ -174,7 +184,13 @@ pub fn start<R: Runtime>(app_handle: AppHandle<R>) {
                 Ok(payload) => {
                     let payload = normalize(payload);
 
-                    let key = format!("{}|{}|{}", payload.source, payload.kind, payload.message);
+                    let key = format!(
+                        "{}|{}|{}|{}",
+                        payload.source,
+                        payload.kind,
+                        payload.project.as_deref().unwrap_or(""),
+                        payload.message
+                    );
                     if recently_seen(key) {
                         log::info!("[notify] throttled {}/{}", payload.source, payload.kind);
                         let _ = stream.write_all(&http_response(200, r#"{"ok":true,"throttled":true}"#));

@@ -17,7 +17,7 @@ import { useAppMenu } from '@/composables/useAppMenu'
 import { useDevice } from '@/composables/useDevice'
 import { useGamepad } from '@/composables/useGamepad'
 import { useModel } from '@/composables/useModel'
-import { collapseStack, expandStack, stackExpanded, statusBadge, useNotify } from '@/composables/useNotify'
+import { collapseStack, dismissBubble, expandStack, snoozeBubble, stackExpanded, statusBadge, useNotify } from '@/composables/useNotify'
 import { useTauriListen } from '@/composables/useTauriListen'
 import { LISTEN_KEY } from '@/constants'
 import { hideWindow, setAlwaysOnTop, setTaskbarVisibility, showWindow } from '@/plugins/window'
@@ -29,7 +29,7 @@ import { isImage } from '@/utils/is'
 import live2d from '@/utils/live2d'
 import { join } from '@/utils/path'
 import { isWindows } from '@/utils/platform'
-import { clearObject } from '@/utils/shared'
+import { clearObject, projectColor } from '@/utils/shared'
 
 const { startListening } = useDevice()
 const appWindow = getCurrentWebviewWindow()
@@ -271,6 +271,15 @@ const STATUS_ICONS: Record<string, string> = {
       >
         <div class="notify-source">
           <span>{{ b.payload.source }}</span>
+          <span
+            v-if="b.payload.project"
+            class="notify-project"
+          >
+            <i
+              class="notify-project-dot"
+              :style="{ background: projectColor(b.payload.project) }"
+            />{{ b.payload.project }}
+          </span>
           <span class="notify-time">{{ fmtBubbleTime(b.ts) }}</span>
         </div>
         <div class="notify-msg">
@@ -282,6 +291,23 @@ const STATUS_ICONS: Record<string, string> = {
         >
           {{ b.payload.title }}
         </div>
+        <div
+          v-if="b.sticky"
+          class="notify-actions"
+        >
+          <button
+            class="notify-btn"
+            @click.stop="dismissBubble(b.id)"
+          >
+            {{ $t('pages.main.bubble.gotIt') }}
+          </button>
+          <button
+            class="notify-btn"
+            @click.stop="snoozeBubble(b.id)"
+          >
+            {{ $t('pages.main.bubble.snooze') }}
+          </button>
+        </div>
       </div>
     </transition-group>
   </div>
@@ -292,9 +318,14 @@ const STATUS_ICONS: Record<string, string> = {
     <div
       v-if="statusBadge"
       class="status-badge"
+      :class="`badge-${notifyStore.badge.style}`"
     >
       <span>{{ STATUS_ICONS[statusBadge.code] ?? '⚙️' }}</span>
       <span>{{ STATUS_ICONS[statusBadge.code] ? $t(`pages.main.status.${statusBadge.code}`) : statusBadge.code }}</span>
+      <span
+        v-if="statusBadge.project"
+        class="status-badge-project"
+      >· {{ statusBadge.project }}</span>
     </div>
   </Transition>
 </template>
@@ -402,9 +433,45 @@ const STATUS_ICONS: Record<string, string> = {
   text-transform: none;
   opacity: 0.75;
 }
+.notify-project {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.notify-project-dot {
+  width: 0.55em;
+  height: 0.55em;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 .notify-msg {
   font-weight: 600;
   word-break: break-word;
+}
+.notify-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.notify-btn {
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85em;
+  line-height: 1.4;
+  padding: 1px 9px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  opacity: 0.75;
+}
+.notify-btn:hover {
+  opacity: 1;
+  background: rgba(127, 127, 127, 0.15);
 }
 .notify-title {
   font-size: 0.9em;
@@ -467,7 +534,7 @@ const STATUS_ICONS: Record<string, string> = {
   text-shadow: 0 0 6px rgba(61, 255, 176, 0.5);
 }
 
-/* ---- ambient status badge (top-right pill) ---- */
+/* ---- ambient status badge (top-right pill, themeable like bubbles) ---- */
 .status-badge {
   position: fixed;
   top: 6px;
@@ -482,10 +549,29 @@ const STATUS_ICONS: Record<string, string> = {
   line-height: 1.4;
   white-space: nowrap;
   pointer-events: none;
+}
+.badge-dark {
   background: rgba(20, 20, 24, 0.82);
   color: #f0f0f0;
   border: 1px solid rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(6px);
+}
+.badge-comic {
+  background: #fff;
+  color: #1a1a1a;
+  border: 1.5px solid #1a1a1a;
+  box-shadow: 1px 2px 0 rgba(26, 26, 26, 0.15);
+}
+.badge-neon {
+  background: rgba(10, 6, 20, 0.92);
+  color: #eafff5;
+  border: 1px solid #3dffb0;
+  box-shadow: 0 0 8px rgba(61, 255, 176, 0.35);
+  text-shadow: 0 0 5px rgba(61, 255, 176, 0.5);
+}
+.status-badge-project {
+  opacity: 0.7;
+  font-weight: 500;
 }
 .status-badge-enter-active,
 .status-badge-leave-active {

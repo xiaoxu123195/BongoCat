@@ -7,3 +7,15 @@ export function clearObject<T extends Record<string, unknown>>(targets: T | T[])
     }
   }
 }
+
+// Stable per-project accent color for notification chips: same name → same
+// hue, so concurrent agent sessions are tellable at a glance.
+export function projectColor(name: string) {
+  let hash = 0
+
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash * 31 + name.charCodeAt(i)) % 360
+  }
+
+  return `hsl(${hash}, 70%, 55%)`
+}

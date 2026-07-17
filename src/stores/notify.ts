@@ -10,6 +10,7 @@ export interface NotifyHistoryItem {
   kind: string
   message: string
   title?: string
+  project?: string
 }
 
 export interface NotifyStore {
@@ -18,6 +19,9 @@ export interface NotifyStore {
     width: number
     fontSize: number
     durationSec: number
+  }
+  badge: {
+    style: BubbleStyle
   }
 }
 
@@ -29,6 +33,10 @@ export const useNotifyStore = defineStore('notify', () => {
     width: 240,
     fontSize: 12,
     durationSec: 8,
+  })
+
+  const badge = reactive<NotifyStore['badge']>({
+    style: 'dark',
   })
 
   const history = ref<NotifyHistoryItem[]>([])
@@ -47,6 +55,7 @@ export const useNotifyStore = defineStore('notify', () => {
 
   return {
     bubble,
+    badge,
     history,
     addHistory,
     clearHistory,

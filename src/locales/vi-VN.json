@@ -10,6 +10,10 @@
         "editing": "Đang viết mã",
         "testing": "Đang chạy thử",
         "waiting": "Chờ phê duyệt"
+      },
+      "bubble": {
+        "gotIt": "Đã hiểu",
+        "snooze": "Nhắc lại sau"
       }
     },
     "preference": {
@@ -168,19 +172,29 @@
           "duration": "Thời lượng",
           "history": "Lịch sử thông báo",
           "historyCount": "{count} bản ghi",
-          "filterAll": "Tất cả"
+          "filterAll": "Tất cả",
+          "claude": "Tích hợp Claude Code",
+          "claudeHooks": "Cấu hình hooks",
+          "badgeStyle": "Kiểu huy hiệu"
         },
         "hints": {
           "preview": "Bong bóng xem trước sẽ tự động hiện khi bạn điều chỉnh.",
           "previewMessage": "Đây là thông báo xem trước ✨",
           "history": "100 thông báo gần nhất, được giữ sau khi khởi động lại.",
-          "historyEmpty": "Chưa có thông báo"
+          "historyEmpty": "Chưa có thông báo",
+          "claude": "Tạo cấu hình hooks mà BongoCat cần; xem trước rồi ghi vào ~/.claude/settings.json chỉ với một cú nhấp.",
+          "hooksBackup": "Tệp gốc được sao lưu thành settings.json.bak trước; các mục BongoCat hiện có sẽ được cập nhật, phần còn lại giữ nguyên. Khởi động lại phiên Claude Code sau khi ghi.",
+          "hooksWritten": "Đã ghi. Có hiệu lực sau khi khởi động lại phiên Claude Code",
+          "hooksMissing": "Không tìm thấy ~/.claude/settings.json — hãy cài và chạy Claude Code trước",
+          "hooksInvalid": "Không phân tích được settings.json, đã hủy ghi"
         },
         "buttons": {
           "preview": "Xem trước",
           "clear": "Xóa",
           "showAll": "Hiện tất cả ({count})",
-          "collapse": "Thu gọn"
+          "collapse": "Thu gọn",
+          "previewHooks": "Xem trước",
+          "writeHooks": "Ghi vào settings.json"
         }
       }
     }

@@ -10,6 +10,10 @@
         "editing": "写代码中",
         "testing": "测试中",
         "waiting": "等待授权"
+      },
+      "bubble": {
+        "gotIt": "知道了",
+        "snooze": "稍后提醒"
       }
     },
     "preference": {
@@ -168,19 +172,29 @@
           "duration": "显示时长",
           "history": "通知记录",
           "historyCount": "共 {count} 条记录",
-          "filterAll": "全部"
+          "filterAll": "全部",
+          "claude": "Claude Code 接入",
+          "claudeHooks": "hooks 配置",
+          "badgeStyle": "角标样式"
         },
         "hints": {
           "preview": "调整下方任意选项时会自动弹出预览。",
           "previewMessage": "这是一条预览通知 ✨",
           "history": "最近 100 条通知，重启后仍保留。",
-          "historyEmpty": "暂无通知记录"
+          "historyEmpty": "暂无通知记录",
+          "claude": "生成 BongoCat 所需的 hooks 配置，预览后可一键写入 ~/.claude/settings.json。",
+          "hooksBackup": "写入前会把原文件备份为 settings.json.bak；已有的 BongoCat 条目会被更新，其他配置保持不变。写入后重启 Claude Code 会话生效。",
+          "hooksWritten": "已写入，重启 Claude Code 会话后生效",
+          "hooksMissing": "未找到 ~/.claude/settings.json，请先安装并运行一次 Claude Code",
+          "hooksInvalid": "settings.json 解析失败，已取消写入"
         },
         "buttons": {
           "preview": "预览弹窗",
           "clear": "清空记录",
           "showAll": "展开全部（{count} 条）",
-          "collapse": "收起"
+          "collapse": "收起",
+          "previewHooks": "预览配置",
+          "writeHooks": "写入 settings.json"
         }
       }
     }

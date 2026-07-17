@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { emit } from '@tauri-apps/api/event'
+import { homeDir } from '@tauri-apps/api/path'
+import { exists, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
 import { useDebounceFn } from '@vueuse/core'
-import { Button, Empty, Flex, Segmented, Slider, Tag } from 'antdv-next'
+import { Button, Empty, Flex, message, Modal, Segmented, Slider, Tag } from 'antdv-next'
 import dayjs from 'dayjs'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -10,6 +12,9 @@ import ProListItem from '@/components/pro-list-item/index.vue'
 import ProList from '@/components/pro-list/index.vue'
 import { LISTEN_KEY } from '@/constants'
 import { useNotifyStore } from '@/stores/notify'
+import { buildClaudeHooks, mergeClaudeHooks } from '@/utils/claude-hooks'
+import { join } from '@/utils/path'
+import { projectColor } from '@/utils/shared'
 
 const notifyStore = useNotifyStore()
 const { t } = useI18n()
@@ -42,6 +47,15 @@ watch(() => ({ ...notifyStore.bubble }), (val, old) => {
   if (JSON.stringify(val) === JSON.stringify(old)) return
 
   debouncedPreview()
+})
+
+// Badge style change → flash a sample status badge on the cat (4s TTL).
+watch(() => notifyStore.badge.style, () => {
+  emit(LISTEN_KEY.PIXO_NOTIFY, {
+    source: 'preview',
+    kind: 'status',
+    message: 'thinking',
+  })
 })
 
 function fmtTime(ts: number) {
@@ -82,6 +96,53 @@ watch(filteredHistory, (items) => {
     historyExpanded.value = false
   }
 })
+
+// Claude Code integration: preview the canonical hook set and merge it into
+// ~/.claude/settings.json (original backed up as settings.json.bak first).
+const hooksModalOpen = ref(false)
+const hooksWriting = ref(false)
+
+const hooksPreview = JSON.stringify({ hooks: buildClaudeHooks() }, null, 2)
+
+async function settingsPath() {
+  return join(await homeDir(), '.claude', 'settings.json')
+}
+
+async function handleWriteHooks() {
+  hooksWriting.value = true
+
+  try {
+    const path = await settingsPath()
+
+    if (!(await exists(path))) {
+      message.error(t('pages.preference.notify.hints.hooksMissing'))
+      return
+    }
+
+    const raw = await readTextFile(path)
+
+    let parsed: Record<string, any>
+
+    try {
+      parsed = JSON.parse(raw)
+    } catch {
+      message.error(t('pages.preference.notify.hints.hooksInvalid'))
+      return
+    }
+
+    await writeTextFile(`${path}.bak`, raw)
+
+    await writeTextFile(path, `${JSON.stringify(mergeClaudeHooks(parsed), null, 2)}\n`)
+
+    message.success(t('pages.preference.notify.hints.hooksWritten'))
+
+    hooksModalOpen.value = false
+  } catch (error) {
+    message.error(String(error))
+  } finally {
+    hooksWriting.value = false
+  }
+}
 </script>
 
 <template>
@@ -101,6 +162,13 @@ watch(filteredHistory, (items) => {
     <ProListItem :title="$t('pages.preference.notify.labels.style')">
       <Segmented
         v-model:value="notifyStore.bubble.style"
+        :options="styleOptions"
+      />
+    </ProListItem>
+
+    <ProListItem :title="$t('pages.preference.notify.labels.badgeStyle')">
+      <Segmented
+        v-model:value="notifyStore.badge.style"
         :options="styleOptions"
       />
     </ProListItem>
@@ -145,6 +213,38 @@ watch(filteredHistory, (items) => {
     </ProListItem>
   </ProList>
 
+  <ProList :title="$t('pages.preference.notify.labels.claude')">
+    <ProListItem
+      :description="$t('pages.preference.notify.hints.claude')"
+      :title="$t('pages.preference.notify.labels.claudeHooks')"
+    >
+      <Button @click="hooksModalOpen = true">
+        {{ $t('pages.preference.notify.buttons.previewHooks') }}
+      </Button>
+    </ProListItem>
+  </ProList>
+
+  <Modal
+    v-model:open="hooksModalOpen"
+    centered
+    :confirm-loading="hooksWriting"
+    :ok-text="$t('pages.preference.notify.buttons.writeHooks')"
+    :title="$t('pages.preference.notify.labels.claudeHooks')"
+    width="720px"
+    @ok="handleWriteHooks"
+  >
+    <Flex
+      gap="small"
+      vertical
+    >
+      <span class="text-3 color-text-tertiary">
+        {{ $t('pages.preference.notify.hints.hooksBackup') }}
+      </span>
+
+      <pre class="hooks-preview">{{ hooksPreview }}</pre>
+    </Flex>
+  </Modal>
+
   <ProList :title="$t('pages.preference.notify.labels.history')">
     <ProListItem
       :description="$t('pages.preference.notify.hints.history')"
@@ -187,6 +287,12 @@ watch(filteredHistory, (items) => {
 
         <span class="text-3 color-text-tertiary">{{ item.source }}</span>
 
+        <span
+          v-if="item.project"
+          class="text-3 font-bold"
+          :style="{ color: projectColor(item.project) }"
+        >{{ item.project }}</span>
+
         <span class="ml-auto text-3 color-text-tertiary">{{ fmtTime(item.ts) }}</span>
       </Flex>
 
@@ -214,3 +320,16 @@ watch(filteredHistory, (items) => {
     </Button>
   </ProList>
 </template>
+
+<style scoped>
+.hooks-preview {
+  max-height: 320px;
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  border-radius: 8px;
+  background: rgba(127, 127, 127, 0.08);
+  font-size: 11px;
+  line-height: 1.5;
+}
+</style>
