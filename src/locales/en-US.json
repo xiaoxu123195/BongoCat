@@ -147,6 +147,32 @@
           "feedbackIssues": "Feedback Issues",
           "viewLog": "View Logs"
         }
+      },
+      "notify": {
+        "title": "Notifications",
+        "labels": {
+          "bubbleSettings": "Bubble Settings",
+          "preview": "Bubble Preview",
+          "style": "Bubble Style",
+          "styleComic": "Comic",
+          "styleDark": "Dark",
+          "styleNeon": "Neon",
+          "width": "Bubble Width",
+          "fontSize": "Font Size",
+          "duration": "Duration",
+          "history": "Notification History",
+          "historyCount": "{count} records"
+        },
+        "hints": {
+          "preview": "A preview bubble pops up automatically as you adjust the options below.",
+          "previewMessage": "This is a preview notification ✨",
+          "history": "Last 100 notifications, kept across restarts.",
+          "historyEmpty": "No notifications yet"
+        },
+        "buttons": {
+          "preview": "Preview",
+          "clear": "Clear"
+        }
       }
     }
   },
@@ -170,7 +196,8 @@
       },
       "buttons": {
         "updateNow": "Update Now",
-        "updateLater": "Update Later"
+        "updateLater": "Update Later",
+        "goDownload": "Download"
       }
     }
   },

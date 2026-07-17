@@ -147,6 +147,32 @@
           "feedbackIssues": "Báo lỗi",
           "viewLog": "Xem nhật ký"
         }
+      },
+      "notify": {
+        "title": "Thông báo",
+        "labels": {
+          "bubbleSettings": "Cài đặt bong bóng",
+          "preview": "Xem trước",
+          "style": "Kiểu bong bóng",
+          "styleComic": "Truyện tranh",
+          "styleDark": "Tối",
+          "styleNeon": "Neon",
+          "width": "Chiều rộng",
+          "fontSize": "Cỡ chữ",
+          "duration": "Thời lượng",
+          "history": "Lịch sử thông báo",
+          "historyCount": "{count} bản ghi"
+        },
+        "hints": {
+          "preview": "Bong bóng xem trước sẽ tự động hiện khi bạn điều chỉnh.",
+          "previewMessage": "Đây là thông báo xem trước ✨",
+          "history": "100 thông báo gần nhất, được giữ sau khi khởi động lại.",
+          "historyEmpty": "Chưa có thông báo"
+        },
+        "buttons": {
+          "preview": "Xem trước",
+          "clear": "Xóa"
+        }
       }
     }
   },
@@ -170,7 +196,8 @@
       },
       "buttons": {
         "updateNow": "Cập nhật ngay",
-        "updateLater": "Để sau"
+        "updateLater": "Để sau",
+        "goDownload": "Tải xuống"
       }
     }
   },

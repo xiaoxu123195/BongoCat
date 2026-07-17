@@ -147,6 +147,32 @@
           "feedbackIssues": "反馈问题",
           "viewLog": "查看日志"
         }
+      },
+      "notify": {
+        "title": "通知",
+        "labels": {
+          "bubbleSettings": "弹窗设置",
+          "preview": "弹窗预览",
+          "style": "弹窗样式",
+          "styleComic": "漫画",
+          "styleDark": "暗黑",
+          "styleNeon": "霓虹",
+          "width": "弹窗宽度",
+          "fontSize": "文字大小",
+          "duration": "显示时长",
+          "history": "通知记录",
+          "historyCount": "共 {count} 条记录"
+        },
+        "hints": {
+          "preview": "调整下方任意选项时会自动弹出预览。",
+          "previewMessage": "这是一条预览通知 ✨",
+          "history": "最近 100 条通知，重启后仍保留。",
+          "historyEmpty": "暂无通知记录"
+        },
+        "buttons": {
+          "preview": "预览弹窗",
+          "clear": "清空记录"
+        }
       }
     }
   },
@@ -170,7 +196,8 @@
       },
       "buttons": {
         "updateNow": "立即更新",
-        "updateLater": "稍后更新"
+        "updateLater": "稍后更新",
+        "goDownload": "前往下载"
       }
     }
   },

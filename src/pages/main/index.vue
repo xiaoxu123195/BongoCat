@@ -8,6 +8,7 @@ import { sep } from '@tauri-apps/api/path'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { exists, readDir } from '@tauri-apps/plugin-fs'
 import { useDebounceFn, useEventListener } from '@vueuse/core'
+import dayjs from 'dayjs'
 import { round } from 'es-toolkit'
 import { nth } from 'es-toolkit/compat'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
@@ -16,13 +17,14 @@ import { useAppMenu } from '@/composables/useAppMenu'
 import { useDevice } from '@/composables/useDevice'
 import { useGamepad } from '@/composables/useGamepad'
 import { useModel } from '@/composables/useModel'
-import { useNotify } from '@/composables/useNotify'
+import { collapseStack, expandStack, stackExpanded, useNotify } from '@/composables/useNotify'
 import { useTauriListen } from '@/composables/useTauriListen'
 import { LISTEN_KEY } from '@/constants'
 import { hideWindow, setAlwaysOnTop, setTaskbarVisibility, showWindow } from '@/plugins/window'
 import { useCatStore } from '@/stores/cat'
 import { useGeneralStore } from '@/stores/general.ts'
 import { useModelStore } from '@/stores/model'
+import { useNotifyStore } from '@/stores/notify'
 import { isImage } from '@/utils/is'
 import live2d from '@/utils/live2d'
 import { join } from '@/utils/path'
@@ -40,6 +42,7 @@ const resizing = ref(false)
 const backgroundImagePath = ref<string>()
 const { stickActive } = useGamepad()
 const { bubbles } = useNotify()
+const notifyStore = useNotifyStore()
 
 onMounted(startListening)
 
@@ -177,6 +180,27 @@ function handleMouseMove(event: MouseEvent) {
 
   catStore.window.scale = round(nextScale)
 }
+
+function fmtBubbleTime(ts: number) {
+  return dayjs(ts).format('HH:mm:ss')
+}
+
+// iOS-style deck: the newest bubble hugs the top edge (above the cat's ear),
+// older ones peek out below it, progressively smaller and more transparent.
+// While hover-expanded, inline styles are dropped so the CSS column layout
+// takes over and every bubble is fully readable.
+function deckStyle(index: number) {
+  if (stackExpanded.value) return void 0
+
+  const depth = Math.min(bubbles.value.length - 1 - index, 2)
+
+  return {
+    top: `${depth * 12}px`,
+    zIndex: 10 - depth,
+    opacity: [1, 0.8, 0.6][depth],
+    scale: String(1 - depth * 0.05),
+  }
+}
 </script>
 
 <template>
@@ -219,16 +243,27 @@ function handleMouseMove(event: MouseEvent) {
   <!-- Notification bubbles from Claude Code / external tools. Kept OUTSIDE the
        cat container: it gets mirrored (-scale-x-100) and opacity-faded, which
        would flip the bubble text / dim it. -->
-  <div class="notify-stack">
+  <div
+    class="notify-stack"
+    :class="{ expanded: stackExpanded }"
+    :style="{
+      '--nb-width': `${notifyStore.bubble.width}px`,
+      '--nb-font': `${notifyStore.bubble.fontSize}px`,
+    }"
+    @mouseenter="expandStack"
+    @mouseleave="collapseStack"
+  >
     <transition-group name="notify-bubble">
       <div
-        v-for="b in bubbles"
+        v-for="(b, index) in bubbles"
         :key="b.id"
         class="notify-bubble"
-        :class="`kind-${b.payload.kind}`"
+        :class="[`kind-${b.payload.kind}`, `style-${notifyStore.bubble.style}`]"
+        :style="deckStyle(index)"
       >
         <div class="notify-source">
-          {{ b.payload.source }}
+          <span>{{ b.payload.source }}</span>
+          <span class="notify-time">{{ fmtBubbleTime(b.ts) }}</span>
         </div>
         <div class="notify-msg">
           {{ b.payload.message }}
@@ -245,65 +280,87 @@ function handleMouseMove(event: MouseEvent) {
 </template>
 
 <style scoped>
-/* Comic speech bubbles, matching BongoCat's hand-drawn white/black-outline
-   style. Anchored top-left so the cat's head (center) stays visible. */
+/* Notification bubbles. Size (--nb-width / --nb-font) and the visual preset
+   (style-comic / style-dark / style-neon) are driven by the notify store,
+   adjustable live from the preference window.
+
+   Stacking is an iOS-style deck: the newest bubble hugs the top edge, older
+   ones peek out below it (smaller + faded). Per-bubble top/z-index/opacity/
+   scale come from deckStyle() inline styles; mount/leave play via keyframe
+   animations (which override inline styles while running). Hovering the deck
+   expands it into a fully readable column and pauses removals. */
 .notify-stack {
   position: fixed;
   top: 6px;
   left: 6px;
   z-index: 100;
+  width: var(--nb-width, 240px);
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.notify-stack.expanded {
+  height: auto;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
-  pointer-events: none;
-  max-width: 62%;
+  gap: 6px;
+}
+.notify-stack.expanded .notify-bubble {
+  position: relative;
 }
 .notify-bubble {
-  position: relative;
-  width: fit-content;
-  padding: 7px 12px 8px;
-  border-radius: 14px;
-  background: #fff;
-  border: 2px solid #1a1a1a;
-  color: #1a1a1a;
-  font-size: 12px;
-  line-height: 1.45;
-  box-shadow: 2px 3px 0 rgba(26, 26, 26, 0.15);
-}
-/* Speech tail on the newest (bottom) bubble, pointing down-right at the cat. */
-.notify-bubble:last-child::after {
-  content: '';
   position: absolute;
-  right: 16px;
-  bottom: -7px;
-  width: 10px;
-  height: 10px;
-  background: #fff;
-  border-right: 2px solid #1a1a1a;
-  border-bottom: 2px solid #1a1a1a;
-  transform: rotate(45deg);
+  left: 0;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.6em 1em 0.7em;
+  border-radius: 1.2em;
+  font-size: var(--nb-font, 12px);
+  line-height: 1.45;
+  transform-origin: top left;
+  pointer-events: auto; /* hoverable so the deck can expand */
+  transition:
+    top 0.25s ease,
+    opacity 0.25s ease,
+    scale 0.25s ease;
+  animation: nb-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes nb-pop {
+  from {
+    opacity: 0;
+    translate: 0 -8px;
+    scale: 0.85;
+  }
+}
+.notify-bubble-leave-active {
+  animation: nb-bye 0.2s ease both;
+}
+@keyframes nb-bye {
+  to {
+    opacity: 0;
+    translate: 0 -6px;
+  }
 }
 .notify-source {
   display: flex;
   align-items: center;
-  font-size: 9px;
+  font-size: 0.75em;
   font-weight: 700;
   letter-spacing: 0.6px;
   text-transform: uppercase;
-  color: rgba(26, 26, 26, 0.45);
   margin-bottom: 2px;
 }
 /* Kind shows as a small outlined dot before the source label. */
 .notify-source::before {
   content: '';
   display: inline-block;
-  width: 7px;
-  height: 7px;
+  width: 0.6em;
+  height: 0.6em;
   border-radius: 50%;
   margin-right: 5px;
   background: #9ca3af;
-  border: 1.5px solid #1a1a1a;
+  flex-shrink: 0;
 }
 .kind-done .notify-source::before {
   background: #4ade80;
@@ -317,28 +374,76 @@ function handleMouseMove(event: MouseEvent) {
 .kind-warn .notify-source::before {
   background: #fb923c;
 }
+.notify-time {
+  margin-left: auto;
+  padding-left: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.75;
+}
 .notify-msg {
   font-weight: 600;
+  word-break: break-word;
 }
 .notify-title {
-  font-size: 11px;
-  color: rgba(26, 26, 26, 0.6);
+  font-size: 0.9em;
+  opacity: 0.65;
   margin-top: 1px;
+  word-break: break-word;
 }
 
-/* Bouncy comic pop-in. */
-.notify-bubble-enter-active {
-  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+/* ---- preset: comic (hand-drawn white/black outline + speech tail) ---- */
+.style-comic {
+  background: #fff;
+  border: 2px solid #1a1a1a;
+  color: #1a1a1a;
+  box-shadow: 2px 3px 0 rgba(26, 26, 26, 0.15);
 }
-.notify-bubble-leave-active {
-  transition: all 0.2s ease;
+.style-comic .notify-source {
+  color: rgba(26, 26, 26, 0.45);
 }
-.notify-bubble-enter-from {
-  opacity: 0;
-  transform: translateY(-8px) scale(0.85);
+.style-comic .notify-source::before {
+  border: 1.5px solid #1a1a1a;
 }
-.notify-bubble-leave-to {
-  opacity: 0;
-  transform: translateY(-6px) scale(0.9);
+.style-comic:last-child::after {
+  content: '';
+  position: absolute;
+  right: 16px;
+  bottom: -7px;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border-right: 2px solid #1a1a1a;
+  border-bottom: 2px solid #1a1a1a;
+  transform: rotate(45deg);
+}
+
+/* ---- preset: dark (frosted glass) ---- */
+.style-dark {
+  background: rgba(20, 20, 24, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f0f0f0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+.style-dark .notify-source {
+  color: rgba(240, 240, 240, 0.5);
+}
+
+/* ---- preset: neon (cyberpunk glow) ---- */
+.style-neon {
+  background: rgba(10, 6, 20, 0.92);
+  border: 1px solid #3dffb0;
+  color: #eafff5;
+  box-shadow:
+    0 0 10px rgba(61, 255, 176, 0.35),
+    inset 0 0 12px rgba(61, 255, 176, 0.08);
+}
+.style-neon .notify-source {
+  color: rgba(61, 255, 176, 0.75);
+}
+.style-neon .notify-msg {
+  text-shadow: 0 0 6px rgba(61, 255, 176, 0.5);
 }
 </style>

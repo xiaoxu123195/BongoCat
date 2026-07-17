@@ -147,6 +147,32 @@
           "feedbackIssues": "回饋問題",
           "viewLog": "查看日誌"
         }
+      },
+      "notify": {
+        "title": "通知",
+        "labels": {
+          "bubbleSettings": "彈窗設定",
+          "preview": "彈窗預覽",
+          "style": "彈窗樣式",
+          "styleComic": "漫畫",
+          "styleDark": "暗黑",
+          "styleNeon": "霓虹",
+          "width": "彈窗寬度",
+          "fontSize": "文字大小",
+          "duration": "顯示時長",
+          "history": "通知記錄",
+          "historyCount": "共 {count} 條記錄"
+        },
+        "hints": {
+          "preview": "調整下方任意選項時會自動彈出預覽。",
+          "previewMessage": "這是一條預覽通知 ✨",
+          "history": "最近 100 條通知，重啟後仍保留。",
+          "historyEmpty": "暫無通知記錄"
+        },
+        "buttons": {
+          "preview": "預覽彈窗",
+          "clear": "清空記錄"
+        }
       }
     }
   },
@@ -170,7 +196,8 @@
       },
       "buttons": {
         "updateNow": "立即更新",
-        "updateLater": "稍後更新"
+        "updateLater": "稍後更新",
+        "goDownload": "前往下載"
       }
     }
   },

@@ -1,4 +1,4 @@
-export const GITHUB_LINK = 'https://github.com/ayangweb/BongoCat'
+export const GITHUB_LINK = 'https://github.com/xiaoxu123195/BongoCat'
 
 export const UPGRADE_LINK_ACCESS_KEY = 'xDbrq2rOoRThDqKOHL2ZRA'
 

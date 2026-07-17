@@ -147,6 +147,32 @@
           "feedbackIssues": "Reportar Problema",
           "viewLog": "Ver Logs"
         }
+      },
+      "notify": {
+        "title": "Notificações",
+        "labels": {
+          "bubbleSettings": "Configurações do balão",
+          "preview": "Pré-visualizar",
+          "style": "Estilo do balão",
+          "styleComic": "Quadrinhos",
+          "styleDark": "Escuro",
+          "styleNeon": "Neon",
+          "width": "Largura",
+          "fontSize": "Tamanho da fonte",
+          "duration": "Duração",
+          "history": "Histórico de notificações",
+          "historyCount": "{count} registros"
+        },
+        "hints": {
+          "preview": "Um balão de pré-visualização aparece automaticamente ao ajustar as opções.",
+          "previewMessage": "Esta é uma notificação de teste ✨",
+          "history": "Últimas 100 notificações, mantidas após reiniciar.",
+          "historyEmpty": "Nenhuma notificação ainda"
+        },
+        "buttons": {
+          "preview": "Pré-visualizar",
+          "clear": "Limpar"
+        }
       }
     }
   },
@@ -170,7 +196,8 @@
       },
       "buttons": {
         "updateNow": "Atualizar Agora",
-        "updateLater": "Atualizar mais tarde"
+        "updateLater": "Atualizar mais tarde",
+        "goDownload": "Baixar"
       }
     }
   },

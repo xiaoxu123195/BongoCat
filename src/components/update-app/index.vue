@@ -1,37 +1,38 @@
 <script setup lang="ts">
-import type { Update } from '@tauri-apps/plugin-updater'
-
-import { relaunch } from '@tauri-apps/plugin-process'
-import { check } from '@tauri-apps/plugin-updater'
+import { openUrl } from '@tauri-apps/plugin-opener'
 import { useIntervalFn } from '@vueuse/core'
 import { Flex, message, Modal } from 'antdv-next'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
-import { computed, reactive, watch } from 'vue'
+import { reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import VueMarkdown from 'vue-markdown-render'
 
 import { useTauriListen } from '@/composables/useTauriListen'
-import { GITHUB_LINK, LISTEN_KEY, UPGRADE_LINK_ACCESS_KEY } from '@/constants'
+import { GITHUB_LINK, LISTEN_KEY } from '@/constants'
 import { showWindow } from '@/plugins/window'
+import { useAppStore } from '@/stores/app'
 import { useGeneralStore } from '@/stores/general'
 
 dayjs.extend(utc)
 
+// Fork note: releases on this repo carry no signed latest.json (updater
+// artifacts are disabled), so the Tauri updater cannot be used. Version checks
+// go through the GitHub API instead, and "update" opens the release page.
+const RELEASE_API = 'https://api.github.com/repos/xiaoxu123195/BongoCat/releases/latest'
+
 interface State {
   open: boolean
-  update?: Update
-  downloading: boolean
-  totalProgress?: number
-  downloadProgress: number
+  version?: string
+  currentVersion?: string
+  body?: string
+  date?: string
+  htmlUrl?: string
 }
 
+const appStore = useAppStore()
 const generalStore = useGeneralStore()
-const state = reactive<State>({
-  open: false,
-  downloading: false,
-  downloadProgress: 0,
-})
+const state = reactive<State>({ open: false })
 const MESSAGE_KEY = 'updatable'
 const { t } = useI18n()
 
@@ -57,34 +58,33 @@ useTauriListen<boolean>(LISTEN_KEY.UPDATE_APP, () => {
   })
 })
 
-const downloadProgress = computed(() => {
-  const { downloadProgress, totalProgress } = state
-
-  if (!totalProgress) return '0%'
-
-  const progress = ((downloadProgress / totalProgress) * 100).toFixed(2)
-
-  return `${progress}%`
-})
-
 async function checkUpdate(visibleMessage = false) {
   try {
-    const update = await check({
-      timeout: 5000,
-      headers: {
-        'X-AccessKey': UPGRADE_LINK_ACCESS_KEY,
-      },
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 8000)
+
+    const resp = await fetch(RELEASE_API, {
+      signal: controller.signal,
+      headers: { Accept: 'application/vnd.github+json' },
     })
 
-    if (update) {
-      const { version, currentVersion, body = '', date, downloadAndInstall } = update
+    clearTimeout(timer)
 
-      state.update = Object.assign(update, {
-        version: `v${version}`,
-        currentVersion: `v${currentVersion}`,
-        body: replaceBody(body),
-        date: dayjs.utc(date?.split('.')[0]).local().format('YYYY-MM-DD HH:mm:ss'),
-        downloadAndInstall: downloadAndInstall.bind(update),
+    if (!resp.ok) throw new Error(`GitHub API ${resp.status}`)
+
+    const release = await resp.json()
+
+    const latest = String(release.tag_name ?? '').replace(/^v/, '')
+
+    if (latest && latest !== appStore.version) {
+      Object.assign(state, {
+        version: `v${latest}`,
+        currentVersion: `v${appStore.version}`,
+        body: release.body ?? '',
+        date: release.published_at
+          ? dayjs.utc(release.published_at).local().format('YYYY-MM-DD HH:mm:ss')
+          : '',
+        htmlUrl: release.html_url ?? `${GITHUB_LINK}/releases/latest`,
       })
 
       showWindow()
@@ -102,38 +102,10 @@ async function checkUpdate(visibleMessage = false) {
   }
 }
 
-function replaceBody(body: string) {
-  return body
-    .replace(/&nbsp;/g, '')
-    .split('\n')
-    .map(line => line.replace(/\s*-\s+by\s+@.*/, ''))
-    .join('\n')
-}
+function handleOk() {
+  openUrl(state.htmlUrl ?? `${GITHUB_LINK}/releases/latest`)
 
-async function handleOk() {
-  try {
-    state.downloading = true
-
-    await state.update?.downloadAndInstall((progress) => {
-      switch (progress.event) {
-        case 'Started':
-          state.totalProgress = progress.data.contentLength ?? 0
-          break
-        case 'Progress':
-          state.downloadProgress += progress.data.chunkLength
-          break
-      }
-    })
-
-    relaunch()
-  } catch (error) {
-    message.error(String(error))
-  } finally {
-    Object.assign(state, {
-      downloading: false,
-      downloadProgress: 0,
-    })
-  }
+  state.open = false
 }
 </script>
 
@@ -144,13 +116,10 @@ async function handleOk() {
     centered
     :closable="false"
     :mask-closable="false"
+    :ok-text="$t('components.updateApp.buttons.goDownload')"
     :title="$t('components.updateApp.title')"
     @ok="handleOk"
   >
-    <template #okText>
-      {{ state.downloading ? downloadProgress : $t('components.updateApp.buttons.updateNow') }}
-    </template>
-
     <Flex
       class="pt-1"
       gap="small"
@@ -159,18 +128,16 @@ async function handleOk() {
       <Flex align="center">
         <span>{{ $t('components.updateApp.labels.updateVersion') }}</span>
         <span>
-          <span>{{ state.update?.currentVersion }} 👉 </span>
-          <a
-            :href="`${GITHUB_LINK}/releases/tag/${state.update?.version}`"
-          >
-            {{ state.update?.version }}
+          <span>{{ state.currentVersion }} 👉 </span>
+          <a :href="`${GITHUB_LINK}/releases/tag/${state.version}`">
+            {{ state.version }}
           </a>
         </span>
       </Flex>
 
       <Flex align="center">
         <span>{{ $t('components.updateApp.labels.updateTime') }}</span>
-        <span>{{ state.update?.date }}</span>
+        <span>{{ state.date }}</span>
       </Flex>
 
       <Flex vertical>
@@ -178,7 +145,7 @@ async function handleOk() {
 
         <VueMarkdown
           class="update-note max-h-40 overflow-auto"
-          :source="state.update?.body ?? ''"
+          :source="state.body ?? ''"
         />
       </Flex>
     </Flex>
