@@ -175,7 +175,9 @@
           "filterAll": "全部",
           "claude": "Claude Code 接入",
           "claudeHooks": "hooks 設定",
-          "badgeStyle": "角標樣式"
+          "badgeStyle": "角標樣式",
+          "today": "今天",
+          "yesterday": "昨天"
         },
         "hints": {
           "preview": "調整下方任意選項時會自動彈出預覽。",

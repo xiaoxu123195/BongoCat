@@ -8,6 +8,8 @@ import dayjs from 'dayjs'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import type { NotifyHistoryItem } from '@/stores/notify'
+
 import ProListItem from '@/components/pro-list-item/index.vue'
 import ProList from '@/components/pro-list/index.vue'
 import { LISTEN_KEY } from '@/constants'
@@ -59,7 +61,17 @@ watch(() => notifyStore.badge.style, () => {
 })
 
 function fmtTime(ts: number) {
-  return dayjs(ts).format('MM-DD HH:mm:ss')
+  return dayjs(ts).format('HH:mm:ss')
+}
+
+function dayLabel(ts: number) {
+  const day = dayjs(ts)
+
+  if (day.isSame(dayjs(), 'day')) return t('pages.preference.notify.labels.today')
+
+  if (day.isSame(dayjs().subtract(1, 'day'), 'day')) return t('pages.preference.notify.labels.yesterday')
+
+  return day.format('YYYY-MM-DD')
 }
 
 // History view: filter by kind, show the latest few, expand on demand.
@@ -87,6 +99,24 @@ const visibleHistory = computed(() => {
   if (historyExpanded.value) return filteredHistory.value
 
   return filteredHistory.value.slice(0, HISTORY_PREVIEW)
+})
+
+// Day headers: history is newest-first, so consecutive same-day runs group.
+const groupedHistory = computed(() => {
+  const groups: { label: string, items: NotifyHistoryItem[] }[] = []
+
+  for (const item of visibleHistory.value) {
+    const label = dayLabel(item.ts)
+    const last = groups[groups.length - 1]
+
+    if (last?.label === label) {
+      last.items.push(item)
+    } else {
+      groups.push({ label, items: [item] })
+    }
+  }
+
+  return groups
 })
 
 // A cleared or shrunken filter result may no longer overflow — reset the
@@ -270,43 +300,52 @@ async function handleWriteHooks() {
       :description="$t('pages.preference.notify.hints.historyEmpty')"
     />
 
-    <Flex
-      v-for="item in visibleHistory"
-      :key="item.id"
-      class="b-1 b-solid p-3 bg-elevated b-border-sec rounded-lg"
-      gap="small"
-      vertical
+    <template
+      v-for="group in groupedHistory"
+      :key="group.label"
     >
+      <div class="text-3 font-bold color-text-tertiary">
+        {{ group.label }}
+      </div>
+
       <Flex
-        align="center"
+        v-for="item in group.items"
+        :key="item.id"
+        class="b-1 b-solid p-3 bg-elevated b-border-sec rounded-lg"
         gap="small"
+        vertical
       >
-        <Tag :color="KIND_COLOR[item.kind] ?? 'default'">
-          {{ item.kind }}
-        </Tag>
+        <Flex
+          align="center"
+          gap="small"
+        >
+          <Tag :color="KIND_COLOR[item.kind] ?? 'default'">
+            {{ item.kind }}
+          </Tag>
 
-        <span class="text-3 color-text-tertiary">{{ item.source }}</span>
+          <span class="text-3 color-text-tertiary">{{ item.source }}</span>
 
-        <span
-          v-if="item.project"
-          class="text-3 font-bold"
-          :style="{ color: projectColor(item.project) }"
-        >{{ item.project }}</span>
+          <span
+            v-if="item.project"
+            class="text-3 font-bold"
+            :style="{ color: projectColor(item.project) }"
+          >{{ item.project }}</span>
 
-        <span class="ml-auto text-3 color-text-tertiary">{{ fmtTime(item.ts) }}</span>
+          <span class="ml-auto text-3 color-text-tertiary">{{ fmtTime(item.ts) }}</span>
+        </Flex>
+
+        <div class="break-all text-3.5">
+          {{ item.message }}
+        </div>
+
+        <div
+          v-if="item.title"
+          class="break-all text-3 color-text-tertiary"
+        >
+          {{ item.title }}
+        </div>
       </Flex>
-
-      <div class="break-all text-3.5">
-        {{ item.message }}
-      </div>
-
-      <div
-        v-if="item.title"
-        class="break-all text-3 color-text-tertiary"
-      >
-        {{ item.title }}
-      </div>
-    </Flex>
+    </template>
 
     <Button
       v-if="filteredHistory.length > HISTORY_PREVIEW"

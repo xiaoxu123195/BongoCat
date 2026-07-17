@@ -175,7 +175,9 @@
           "filterAll": "Todos",
           "claude": "Integração Claude Code",
           "claudeHooks": "Config de hooks",
-          "badgeStyle": "Estilo do emblema"
+          "badgeStyle": "Estilo do emblema",
+          "today": "Hoje",
+          "yesterday": "Ontem"
         },
         "hints": {
           "preview": "Um balão de pré-visualização aparece automaticamente ao ajustar as opções.",

@@ -175,7 +175,9 @@
           "filterAll": "Tất cả",
           "claude": "Tích hợp Claude Code",
           "claudeHooks": "Cấu hình hooks",
-          "badgeStyle": "Kiểu huy hiệu"
+          "badgeStyle": "Kiểu huy hiệu",
+          "today": "Hôm nay",
+          "yesterday": "Hôm qua"
         },
         "hints": {
           "preview": "Bong bóng xem trước sẽ tự động hiện khi bạn điều chỉnh.",

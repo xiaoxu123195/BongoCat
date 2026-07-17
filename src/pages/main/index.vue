@@ -13,6 +13,8 @@ import { round } from 'es-toolkit'
 import { nth } from 'es-toolkit/compat'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 
+import type { NotifyEntry } from '@/composables/useNotify'
+
 import { useAppMenu } from '@/composables/useAppMenu'
 import { useDevice } from '@/composables/useDevice'
 import { useGamepad } from '@/composables/useGamepad'
@@ -202,6 +204,12 @@ function deckStyle(index: number) {
   }
 }
 
+// Auto-expiring bubbles dismiss on click (read it, tap it, gone); sticky
+// ones require an explicit button so they can't be swatted by accident.
+function handleBubbleClick(b: NotifyEntry) {
+  if (!b.sticky) dismissBubble(b.id)
+}
+
 // Known agent status codes → badge icon; unknown codes render their raw text.
 const STATUS_ICONS: Record<string, string> = {
   thinking: '💭',
@@ -266,8 +274,9 @@ const STATUS_ICONS: Record<string, string> = {
         v-for="(b, index) in bubbles"
         :key="b.id"
         class="notify-bubble"
-        :class="[`kind-${b.payload.kind}`, `style-${notifyStore.bubble.style}`]"
+        :class="[`kind-${b.payload.kind}`, `style-${notifyStore.bubble.style}`, { clickable: !b.sticky }]"
         :style="deckStyle(index)"
+        @click="handleBubbleClick(b)"
       >
         <div class="notify-source">
           <span>{{ b.payload.source }}</span>
@@ -383,6 +392,9 @@ const STATUS_ICONS: Record<string, string> = {
     translate: 0 -8px;
     scale: 0.85;
   }
+}
+.notify-bubble.clickable {
+  cursor: pointer;
 }
 .notify-bubble-leave-active {
   animation: nb-bye 0.2s ease both;

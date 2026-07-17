@@ -175,7 +175,9 @@
           "filterAll": "All",
           "claude": "Claude Code Integration",
           "claudeHooks": "Hooks config",
-          "badgeStyle": "Badge Style"
+          "badgeStyle": "Badge Style",
+          "today": "Today",
+          "yesterday": "Yesterday"
         },
         "hints": {
           "preview": "A preview bubble pops up automatically as you adjust the options below.",
