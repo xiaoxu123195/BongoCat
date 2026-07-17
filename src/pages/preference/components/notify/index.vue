@@ -3,7 +3,7 @@ import { emit } from '@tauri-apps/api/event'
 import { useDebounceFn } from '@vueuse/core'
 import { Button, Empty, Flex, Segmented, Slider, Tag } from 'antdv-next'
 import dayjs from 'dayjs'
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import ProListItem from '@/components/pro-list-item/index.vue'
@@ -47,6 +47,41 @@ watch(() => ({ ...notifyStore.bubble }), (val, old) => {
 function fmtTime(ts: number) {
   return dayjs(ts).format('MM-DD HH:mm:ss')
 }
+
+// History view: filter by kind, show the latest few, expand on demand.
+const HISTORY_PREVIEW = 10
+
+const kindFilter = ref('all')
+const historyExpanded = ref(false)
+
+const kindOptions = computed(() => {
+  const kinds = [...new Set(notifyStore.history.map(item => item.kind))]
+
+  return [
+    { label: t('pages.preference.notify.labels.filterAll'), value: 'all' },
+    ...kinds.map(kind => ({ label: kind, value: kind })),
+  ]
+})
+
+const filteredHistory = computed(() => {
+  if (kindFilter.value === 'all') return notifyStore.history
+
+  return notifyStore.history.filter(item => item.kind === kindFilter.value)
+})
+
+const visibleHistory = computed(() => {
+  if (historyExpanded.value) return filteredHistory.value
+
+  return filteredHistory.value.slice(0, HISTORY_PREVIEW)
+})
+
+// A cleared or shrunken filter result may no longer overflow — reset the
+// toggle so the button label stays truthful.
+watch(filteredHistory, (items) => {
+  if (items.length <= HISTORY_PREVIEW) {
+    historyExpanded.value = false
+  }
+})
 </script>
 
 <template>
@@ -124,13 +159,19 @@ function fmtTime(ts: number) {
       </Button>
     </ProListItem>
 
+    <Segmented
+      v-if="notifyStore.history.length"
+      v-model:value="kindFilter"
+      :options="kindOptions"
+    />
+
     <Empty
-      v-if="!notifyStore.history.length"
+      v-if="!filteredHistory.length"
       :description="$t('pages.preference.notify.hints.historyEmpty')"
     />
 
     <Flex
-      v-for="item in notifyStore.history"
+      v-for="item in visibleHistory"
       :key="item.id"
       class="b-1 b-solid p-3 bg-elevated b-border-sec rounded-lg"
       gap="small"
@@ -160,5 +201,16 @@ function fmtTime(ts: number) {
         {{ item.title }}
       </div>
     </Flex>
+
+    <Button
+      v-if="filteredHistory.length > HISTORY_PREVIEW"
+      block
+      type="text"
+      @click="historyExpanded = !historyExpanded"
+    >
+      {{ historyExpanded
+        ? $t('pages.preference.notify.buttons.collapse')
+        : $t('pages.preference.notify.buttons.showAll', { count: filteredHistory.length }) }}
+    </Button>
   </ProList>
 </template>

@@ -4,6 +4,12 @@
       "hints": {
         "redrawing": "重绘中...",
         "switching": "切换中..."
+      },
+      "status": {
+        "thinking": "思考中",
+        "editing": "写代码中",
+        "testing": "测试中",
+        "waiting": "等待授权"
       }
     },
     "preference": {
@@ -161,7 +167,8 @@
           "fontSize": "文字大小",
           "duration": "显示时长",
           "history": "通知记录",
-          "historyCount": "共 {count} 条记录"
+          "historyCount": "共 {count} 条记录",
+          "filterAll": "全部"
         },
         "hints": {
           "preview": "调整下方任意选项时会自动弹出预览。",
@@ -171,7 +178,9 @@
         },
         "buttons": {
           "preview": "预览弹窗",
-          "clear": "清空记录"
+          "clear": "清空记录",
+          "showAll": "展开全部（{count} 条）",
+          "collapse": "收起"
         }
       }
     }

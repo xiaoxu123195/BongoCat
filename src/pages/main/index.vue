@@ -17,7 +17,7 @@ import { useAppMenu } from '@/composables/useAppMenu'
 import { useDevice } from '@/composables/useDevice'
 import { useGamepad } from '@/composables/useGamepad'
 import { useModel } from '@/composables/useModel'
-import { collapseStack, expandStack, stackExpanded, useNotify } from '@/composables/useNotify'
+import { collapseStack, expandStack, stackExpanded, statusBadge, useNotify } from '@/composables/useNotify'
 import { useTauriListen } from '@/composables/useTauriListen'
 import { LISTEN_KEY } from '@/constants'
 import { hideWindow, setAlwaysOnTop, setTaskbarVisibility, showWindow } from '@/plugins/window'
@@ -201,6 +201,14 @@ function deckStyle(index: number) {
     scale: String(1 - depth * 0.05),
   }
 }
+
+// Known agent status codes → badge icon; unknown codes render their raw text.
+const STATUS_ICONS: Record<string, string> = {
+  thinking: '💭',
+  editing: '✍️',
+  testing: '🧪',
+  waiting: '⏸',
+}
 </script>
 
 <template>
@@ -277,6 +285,18 @@ function deckStyle(index: number) {
       </div>
     </transition-group>
   </div>
+
+  <!-- Ambient status badge: what the agent is doing right now. Outside the
+       mirrored cat container for the same reason as the bubble stack. -->
+  <Transition name="status-badge">
+    <div
+      v-if="statusBadge"
+      class="status-badge"
+    >
+      <span>{{ STATUS_ICONS[statusBadge.code] ?? '⚙️' }}</span>
+      <span>{{ STATUS_ICONS[statusBadge.code] ? $t(`pages.main.status.${statusBadge.code}`) : statusBadge.code }}</span>
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
@@ -445,5 +465,37 @@ function deckStyle(index: number) {
 }
 .style-neon .notify-msg {
   text-shadow: 0 0 6px rgba(61, 255, 176, 0.5);
+}
+
+/* ---- ambient status badge (top-right pill) ---- */
+.status-badge {
+  position: fixed;
+  top: 6px;
+  right: 6px;
+  z-index: 99;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  background: rgba(20, 20, 24, 0.82);
+  color: #f0f0f0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(6px);
+}
+.status-badge-enter-active,
+.status-badge-leave-active {
+  transition:
+    opacity 0.2s ease,
+    translate 0.2s ease;
+}
+.status-badge-enter-from,
+.status-badge-leave-to {
+  opacity: 0;
+  translate: 0 -6px;
 }
 </style>

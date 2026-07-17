@@ -4,6 +4,12 @@
       "hints": {
         "redrawing": "Redrawing...",
         "switching": "Switching..."
+      },
+      "status": {
+        "thinking": "Thinking",
+        "editing": "Editing",
+        "testing": "Testing",
+        "waiting": "Awaiting approval"
       }
     },
     "preference": {
@@ -161,7 +167,8 @@
           "fontSize": "Font Size",
           "duration": "Duration",
           "history": "Notification History",
-          "historyCount": "{count} records"
+          "historyCount": "{count} records",
+          "filterAll": "All"
         },
         "hints": {
           "preview": "A preview bubble pops up automatically as you adjust the options below.",
@@ -171,7 +178,9 @@
         },
         "buttons": {
           "preview": "Preview",
-          "clear": "Clear"
+          "clear": "Clear",
+          "showAll": "Show all ({count})",
+          "collapse": "Collapse"
         }
       }
     }

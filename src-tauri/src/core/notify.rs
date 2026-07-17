@@ -1,9 +1,13 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
-use tauri::{AppHandle, Emitter, Runtime};
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
+use tauri_plugin_custom_window::MAIN_WINDOW_LABEL;
+use tauri_plugin_notification::NotificationExt;
 
 const MAX_BODY: usize = 8 * 1024;
 const BIND_ADDR: &str = "127.0.0.1:7077";
@@ -25,7 +29,23 @@ pub struct NotifyPayload {
 fn default_source() -> String { "unknown".into() }
 fn default_kind() -> String { "info".into() }
 
-const VALID_KINDS: &[&str] = &["info", "need-input", "done", "warn", "error", "schedule"];
+const VALID_KINDS: &[&str] = &["info", "need-input", "done", "warn", "error", "schedule", "status"];
+
+// Drop identical (source, kind, message) arrivals within this window so
+// concurrent sessions / chatty hooks can't spam the bubble stack.
+const DEDUP_WINDOW: Duration = Duration::from_secs(5);
+
+fn recently_seen(key: String) -> bool {
+    static SEEN: OnceLock<Mutex<HashMap<String, Instant>>> = OnceLock::new();
+    let mut map = SEEN.get_or_init(|| Mutex::new(HashMap::new())).lock().unwrap();
+    let now = Instant::now();
+    map.retain(|_, t| now.duration_since(*t) < DEDUP_WINDOW);
+    if map.contains_key(&key) {
+        return true;
+    }
+    map.insert(key, now);
+    false
+}
 
 fn normalize(mut p: NotifyPayload) -> NotifyPayload {
     if p.source.is_empty() { p.source = "unknown".into(); }
@@ -153,8 +173,36 @@ pub fn start<R: Runtime>(app_handle: AppHandle<R>) {
             match serde_json::from_slice::<NotifyPayload>(&body) {
                 Ok(payload) => {
                     let payload = normalize(payload);
+
+                    let key = format!("{}|{}|{}", payload.source, payload.kind, payload.message);
+                    if recently_seen(key) {
+                        log::info!("[notify] throttled {}/{}", payload.source, payload.kind);
+                        let _ = stream.write_all(&http_response(200, r#"{"ok":true,"throttled":true}"#));
+                        continue;
+                    }
+
                     log::info!("[notify] {}/{}: {}", payload.source, payload.kind, payload.message);
                     let _ = app_handle.emit("pixo-notify", &payload);
+
+                    // Cat window hidden → the bubble would land on a window
+                    // nobody can see; escalate to an OS notification instead.
+                    // Status ticks are ambient and never worth an OS toast.
+                    if payload.kind != "status" {
+                        let visible = app_handle
+                            .get_webview_window(MAIN_WINDOW_LABEL)
+                            .map(|w| w.is_visible().unwrap_or(true))
+                            .unwrap_or(false);
+                        if !visible {
+                            let title = payload.title.clone().unwrap_or_else(|| payload.source.clone());
+                            let _ = app_handle
+                                .notification()
+                                .builder()
+                                .title(title)
+                                .body(&payload.message)
+                                .show();
+                        }
+                    }
+
                     let _ = stream.write_all(&http_response(200, r#"{"ok":true}"#));
                 }
                 Err(e) => {

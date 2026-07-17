@@ -4,6 +4,12 @@
       "hints": {
         "redrawing": "Redimensionando...",
         "switching": "Alternando..."
+      },
+      "status": {
+        "thinking": "Pensando",
+        "editing": "Editando",
+        "testing": "Testando",
+        "waiting": "Aguardando aprovação"
       }
     },
     "preference": {
@@ -161,7 +167,8 @@
           "fontSize": "Tamanho da fonte",
           "duration": "Duração",
           "history": "Histórico de notificações",
-          "historyCount": "{count} registros"
+          "historyCount": "{count} registros",
+          "filterAll": "Todos"
         },
         "hints": {
           "preview": "Um balão de pré-visualização aparece automaticamente ao ajustar as opções.",
@@ -171,7 +178,9 @@
         },
         "buttons": {
           "preview": "Pré-visualizar",
-          "clear": "Limpar"
+          "clear": "Limpar",
+          "showAll": "Mostrar tudo ({count})",
+          "collapse": "Recolher"
         }
       }
     }

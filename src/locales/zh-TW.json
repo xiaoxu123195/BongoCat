@@ -4,6 +4,12 @@
       "hints": {
         "redrawing": "重繪中…",
         "switching": "切換中…"
+      },
+      "status": {
+        "thinking": "思考中",
+        "editing": "寫程式中",
+        "testing": "測試中",
+        "waiting": "等待授權"
       }
     },
     "preference": {
@@ -161,7 +167,8 @@
           "fontSize": "文字大小",
           "duration": "顯示時長",
           "history": "通知記錄",
-          "historyCount": "共 {count} 條記錄"
+          "historyCount": "共 {count} 條記錄",
+          "filterAll": "全部"
         },
         "hints": {
           "preview": "調整下方任意選項時會自動彈出預覽。",
@@ -171,7 +178,9 @@
         },
         "buttons": {
           "preview": "預覽彈窗",
-          "clear": "清空記錄"
+          "clear": "清空記錄",
+          "showAll": "展開全部（{count} 條）",
+          "collapse": "收起"
         }
       }
     }

@@ -4,6 +4,12 @@
       "hints": {
         "redrawing": "Đang đổi kích thước...",
         "switching": "Đang chuyển đổi..."
+      },
+      "status": {
+        "thinking": "Đang suy nghĩ",
+        "editing": "Đang viết mã",
+        "testing": "Đang chạy thử",
+        "waiting": "Chờ phê duyệt"
       }
     },
     "preference": {
@@ -161,7 +167,8 @@
           "fontSize": "Cỡ chữ",
           "duration": "Thời lượng",
           "history": "Lịch sử thông báo",
-          "historyCount": "{count} bản ghi"
+          "historyCount": "{count} bản ghi",
+          "filterAll": "Tất cả"
         },
         "hints": {
           "preview": "Bong bóng xem trước sẽ tự động hiện khi bạn điều chỉnh.",
@@ -171,7 +178,9 @@
         },
         "buttons": {
           "preview": "Xem trước",
-          "clear": "Xóa"
+          "clear": "Xóa",
+          "showAll": "Hiện tất cả ({count})",
+          "collapse": "Thu gọn"
         }
       }
     }
