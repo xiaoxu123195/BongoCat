@@ -138,15 +138,23 @@ pub fn start<R: Runtime>(app_handle: AppHandle<R>) {
     }
 
     std::thread::spawn(move || {
-        let listener = match TcpListener::bind(BIND_ADDR) {
-            Ok(l) => {
-                log::info!("[notify] listening on http://{}", BIND_ADDR);
-                l
-            }
-            Err(e) => {
-                log::warn!("[notify] bind failed: {}", e);
-                RUNNING.store(false, Ordering::SeqCst);
-                return;
+        // A restart race (the old process still holding the port for a few
+        // seconds) must not kill the server for the whole app lifetime —
+        // keep retrying until the port frees up.
+        let mut attempt: u32 = 0;
+        let listener = loop {
+            match TcpListener::bind(BIND_ADDR) {
+                Ok(l) => {
+                    log::info!("[notify] listening on http://{}", BIND_ADDR);
+                    break l;
+                }
+                Err(e) => {
+                    if attempt % 20 == 0 {
+                        log::warn!("[notify] bind failed: {} — retrying every 15s", e);
+                    }
+                    attempt += 1;
+                    std::thread::sleep(Duration::from_secs(15));
+                }
             }
         };
 
